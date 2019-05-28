@@ -70,7 +70,8 @@
 
 <script>
 // Here we use the axios instance created in axios-auth.js
-import axios from '../../axios-auth'
+// Got moved to store.js
+// import axios from '../../axios-auth'
 
   export default {
     data () {
@@ -106,13 +107,11 @@ import axios from '../../axios-auth'
           terms: this.terms
         }
         console.log(formData)
-        axios.post('/users.json', formData)
-          .then(response => {
-            console.log(response)
-          })
-          .catch(error => {
-            console.log(error)
-          })
+        // const user = {
+        //   email: formData.email,
+        //   password: formData.password
+        // }
+        this.$store.dispatch('signUp', formData)
       }
     }
   }

@@ -39,8 +39,9 @@
           password: this.password,
         }
         console.log(formData)
+        this.$store.dispatch('login', formData)
       }
-    }
+    }    
   }
 </script>
 
