@@ -3,6 +3,7 @@ import App from './App.vue'
 
 import router from './router'
 import store from './store'
+import Vuelidate from 'vuelidate'
 // The axios import here is to set global settings for axios
 // We still need to import axios on each component we use axios. The imports will be merged
 import axios from 'axios'
@@ -24,6 +25,8 @@ axios.interceptors.response.use(res => {
   console.log('Response interceptor: ', res)
   return res
 })
+
+Vue.use(Vuelidate)
 
 new Vue({
   el: '#app',
