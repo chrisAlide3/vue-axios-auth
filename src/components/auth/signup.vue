@@ -2,6 +2,7 @@
   <div id="signup">
     <div class="signup-form">
       <form @submit.prevent="onSubmit">
+        <!-- email -->
         <!-- We add an invalid class through v-bind(:) and assign the value of the validator email field 
              so $v holds the infos of all the validator on the form. We access the email validator
              and access the $error boolean of the email validator -->
@@ -22,6 +23,7 @@
           <p class="error" v-if="!$v.email.email">Please enter a valid email address</p>
           <p class="error" v-if="!$v.email.required & $v.email.$dirty">Please enter your email</p>
         </div>
+        <!-- Age -->
         <div class="input" :class="{invalid: $v.age.$error}">
           <label for="age">Your Age
             <sup v-if="$v.age.$params.required">*</sup>
@@ -33,7 +35,9 @@
                   v-model.number="age">
           <p class="error" v-if="!$v.age.minVal">You must be at least 18 years old to subscribe</p>
           <p class="error" v-if="!$v.age.required & $v.age.$dirty">Please enter your age</p>
+          <p>{{ $v }}</p>
         </div>
+        <!-- Password -->
         <div class="input">
           <label for="password">Password</label>
           <input
@@ -41,6 +45,7 @@
                   id="password"
                   v-model="password">
         </div>
+        <!-- Confirm password -->
         <div class="input">
           <label for="confirm-password">Confirm Password</label>
           <input
@@ -48,6 +53,7 @@
                   id="confirm-password"
                   v-model="confirmPassword">
         </div>
+        <!-- Country -->
         <div class="input">
           <label for="country">Country</label>
           <select id="country" v-model="country">
@@ -57,6 +63,7 @@
             <option value="germany">Germany</option>
           </select>
         </div>
+        <!-- Hobbies -->
         <div class="hobbies">
           <h3>Add some Hobbies</h3>
           <button @click="onAddHobby" type="button">Add Hobby</button>
@@ -74,10 +81,12 @@
             </div>
           </div>
         </div>
+        <!-- Terms of use -->
         <div class="input inline">
           <input type="checkbox" id="terms" v-model="terms">
           <label for="terms">Accept Terms of Use</label>
         </div>
+        <!-- Submit -->
         <div class="submit">
           <button type="submit">Submit</button>
         </div>
