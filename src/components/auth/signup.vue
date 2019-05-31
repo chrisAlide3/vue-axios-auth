@@ -5,7 +5,8 @@
         <!-- email -->
         <!-- We add an invalid class through v-bind(:) and assign the value of the validator email field 
              so $v holds the infos of all the validator on the form. We access the email validator
-             and access the $error boolean of the email validator -->
+             and access the $error boolean of the email validator 
+             $.dirty = true means the field has been touched-->
         <div class="input" :class='{invalid: $v.email.$error}'>
           <label for="email">Mail
             <sup v-if="$v.email.$params.required">*</sup>
@@ -14,14 +15,18 @@
               We can use other v-ons like @blur to fire the validation once the user exits the field
               Then access the wished validator with .validatorName. 
               Finally inform vuelify to execute the navigator with the .touch() inbuild functio
-              Here $v.email.$touch(). This insures that $dirty, $error are handled correctly  -->
+              Here $v.email.$touch(). This insures that $dirty, $error are handled correctly 
+              $dirty = true means the field has been touched -->
           <input
                   type="email"
                   id="email"
                   @blur="$v.email.$touch()"
                   v-model="email">
-          <p class="error" v-if="!$v.email.email">Please enter a valid email address</p>
+          <!-- We only display errors when the field has been touched with the $dirty property
+              In our case the touch() will be triggered when we exit the field (@blur)-->
+          <p class="error" v-if="!$v.email.email &$v.email.$dirty">Please enter a valid email address</p>
           <p class="error" v-if="!$v.email.required & $v.email.$dirty">Please enter your email</p>
+          <p class="error" v-if="!$v.email.unique & $v.email.$dirty">This email is already taken. Please Sign In</p>
         </div>
         <!-- Age -->
         <div class="input" :class="{invalid: $v.age.$error}">
@@ -33,25 +38,36 @@
                   id="age"
                   @blur="$v.age.$touch()"
                   v-model.number="age">
-          <p class="error" v-if="!$v.age.minVal">You must be at least 18 years old to subscribe</p>
+          <!-- We only display errors when the field has been touched with the $dirty property
+              In our case the touch() will be triggered when we exit the field (@blur)-->
+          <p class="error" v-if="!$v.age.minVal &$v.age.$dirty">You must be at least {{ $v.age.$params.minVal.min }} years old to subscribe</p>
           <p class="error" v-if="!$v.age.required & $v.age.$dirty">Please enter your age</p>
-          <p>{{ $v }}</p>
         </div>
         <!-- Password -->
-        <div class="input">
-          <label for="password">Password</label>
+        <div class="input" :class="{invalid: $v.password.$error}">
+          <label for="password">Password
+            <sup v-if="$v.password.$params.required">*</sup>
+          </label>
           <input
                   type="password"
                   id="password"
+                  @blur="$v.password.$touch()"
                   v-model="password">
+          <p class="error" v-if="!$v.password.required  & $v.password.$dirty">Please enter a password</p>
+          <p class="error" v-if="!$v.password.minLen  & $v.password.$dirty">Password must be at least {{ $v.password.$params.minLen.min }} character long</p>
+
         </div>
         <!-- Confirm password -->
-        <div class="input">
-          <label for="confirm-password">Confirm Password</label>
+        <div class="input" :class="{invalid: $v.confirmPassword.$error}">
+          <label for="confirm-password">Confirm Password
+            <sup v-if="$v.email.$params.required">*</sup>
+          </label>
           <input
                   type="password"
                   id="confirm-password"
+                  @blur="$v.confirmPassword.$touch()"
                   v-model="confirmPassword">
+          <p class="error" v-if="!$v.confirmPassword.sameAs  & $v.confirmPassword.$dirty">Password doesn't match</p>
         </div>
         <!-- Country -->
         <div class="input">
@@ -71,24 +87,35 @@
             <div
                     class="input"
                     v-for="(hobbyInput, index) in hobbyInputs"
+                    :class="{invalid: $v.hobbyInputs.$each[index].$error}"
                     :key="hobbyInput.id">
               <label :for="hobbyInput.id">Hobby #{{ index }}</label>
               <input
                       type="text"
                       :id="hobbyInput.id"
+                      @blur="$v.hobbyInputs.$each[index].value.$touch()"
                       v-model="hobbyInput.value">
               <button @click="onDeleteHobby(hobbyInput.id)" type="button">X</button>
+              <p class="error" v-if="!$v.hobbyInputs.$each[index].value.minLen">Hobbies need at least 5 characters</p>
             </div>
+            <p class="error" v-if="!$v.hobbyInputs.minLen">You need to add at least {{ $v.hobbyInputs.$params.minLen.min }} hobby</p>
+            <p class="error" v-if="!$v.hobbyInputs.required">Please add hobbies</p>          
           </div>
         </div>
         <!-- Terms of use -->
-        <div class="input inline">
-          <input type="checkbox" id="terms" v-model="terms">
+          <!-- Here we check $invalid instead of error to mark it red on load -->
+        <div class="input inline" :class="{invalid: !$v.terms.requiredUnless}">
+          <input  type="checkbox" 
+                  id="terms"
+                  @change="$v.terms.$touch()" 
+                  v-model="terms">
           <label for="terms">Accept Terms of Use</label>
+          <p>{{ $v.terms }}</p>
+
         </div>
         <!-- Submit -->
         <div class="submit">
-          <button type="submit">Submit</button>
+          <button type="submit" :disabled="$v.$invalid">Submit</button>
         </div>
       </form>
     </div>
@@ -96,12 +123,12 @@
 </template>
 
 <script>
+import axios from 'axios'
 // We need to import validators from the vuelidate package. Full list on webpage under bulletin validators
-import { required, email, minValue, numeric } from 'vuelidate/lib/validators'
+import { required, email, minValue, numeric, minLength, sameAs, requiredUnless } from 'vuelidate/lib/validators'
 // Here we use the axios instance created in axios-auth.js
 // Got moved to store.js
 // import axios from '../../axios-auth'
-
   export default {
     data () {
       return {
@@ -117,12 +144,61 @@ import { required, email, minValue, numeric } from 'vuelidate/lib/validators'
     validations: {
       email: {
         required,
-        email
+        email,
+// Custom validators. Asynchronus with promise
+        unique: val => {
+          if (val === '') return true
+          return axios.get('/users.json?orderBy="email"&equalTo="' + val + '"')
+            .then(res => {
+              console.log(res)
+              // axios returns an empty data object if he don't find the email
+              return Object.keys(res.data).length === 0
+            })
+          // return new Promise((resolve, reject) => {
+          //   setTimeout(() => {
+          //     resolve(val !== 'test@test.com')
+          //   },3000)
+          // })
+        }
       },
       age: {
         required,
         numeric,
         minVal: minValue(18)
+      },
+      password: {
+        required,
+        minLen: minLength(6),
+      },
+      confirmPassword: {
+        required,
+        sameAs: sameAs('password'),
+// samAs can also be defined as a function. It receives the data() method as parameter
+// So here we return the password value and add a 'b' to it. Now it will check confirmPassword with password+b
+//        sameAs: sameAs(vm => {
+//          return vm.password + 'b'
+//        })
+      },
+      terms: {
+// Check box required is always true. We need to use sameAs
+//      required
+        requiredUnless: sameAs(vm => {
+            return vm.country !== 'germany'
+        })
+      },
+      hobbyInputs: {
+        required,
+        // Now we are on the array. Here we specify that we need at lest 1 element in the array
+        minLen: minLength(2),
+        // With $each we loop through the array and touch each object in the array
+        $each: {
+          // Here we acces the input value of it
+          value: {
+            // And set the validation rules like on email, paswords etc..
+            // Here we check the minimal length of the inputed characters
+            minLen: minLength(5)
+          }
+        }
       }
     },
     methods: {
@@ -206,7 +282,7 @@ sup {
   }
 
   /* Defining the style for the validators invalid class */
-  .input.invalid input{
+  .input.invalid input {
     border: 1px solid red;
     background-color: #f7b4b4;
   }
